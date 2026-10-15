@@ -65,6 +65,7 @@ th,td{padding:8px 4px;border-bottom:1px solid #ddd;text-align:left;font-size:13p
 <input id="recibido" type="number" min="0" value="0" oninput="actualizarTotal()">
 <div class="total" id="total">Total: L 0.00</div>
 <div id="saldo" class="small">Saldo pendiente: L 0.00</div>
+ <div id="cambio" class="small">Cambio a devolver: L 0.00</div>
 <button onclick="guardar()">Guardar factura</button>
 <button class="secondary" onclick="limpiar()">Limpiar</button>
 <p class="small">Comprobante interno; no sustituye una factura fiscal autorizada.</p>
@@ -141,7 +142,8 @@ function actualizarTotal(){
  let t=carrito.reduce((s,e)=>s+e.precio*e.cantidad,0);
  let r=Math.max(0,Number($("recibido").value)||0);
  $("total").textContent="Total: "+dinero(t);
- $("saldo").textContent="Saldo pendiente: "+dinero(Math.max(0,t-r))+" · Cambio: "+dinero(Math.max(0,r-t));
+ $("saldo").textContent="Saldo pendiente: "+dinero(Math.max(0,t-r));
+$("cambio").textContent="Cambio a devolver: "+dinero(Math.max(0,r-t));
 }
 function limpiar(){
  if(!confirm("¿Limpiar la factura sin guardar?"))return;

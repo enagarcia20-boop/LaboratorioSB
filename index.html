@@ -1,0 +1,239 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#087f8c">
+<title>Laboratorio Salud y Bienestar</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;margin:0;background:#f1f7f7;color:#20383d}
+header{background:#087f8c;color:white;padding:22px 14px;text-align:center}
+header h1{font-size:23px;margin:0 0 8px}
+main{max-width:850px;margin:auto;padding:14px}
+.card{background:white;padding:16px;margin-bottom:15px;border-radius:12px;box-shadow:0 2px 8px #0001}
+h2{color:#087f8c;font-size:20px}
+label{display:block;font-weight:bold;margin-top:12px}
+input,select{width:100%;padding:11px;margin-top:5px;border:1px solid #bdcecf;border-radius:7px;font-size:16px}
+button{padding:11px 14px;border:0;border-radius:7px;background:#087f8c;color:white;font-weight:bold;margin:7px 4px 4px 0}
+.secondary{background:#e4eeee;color:#17474c}
+.danger{background:#a72c2c}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{padding:8px 4px;border-bottom:1px solid #ddd;text-align:left;font-size:13px}
+.scroll{overflow-x:auto}
+.total{font-size:21px;font-weight:bold;text-align:right;margin-top:15px}
+.small{font-size:13px;color:#526a6e}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<header>
+<h1>Laboratorio Clínico Salud y Bienestar</h1>
+<div>Siguatepeque, Comayagua</div>
+<div>WhatsApp: 8956-3641</div>
+</header>
+<main>
+<section class="card">
+<h2>Nueva factura</h2>
+<label>Nombre del paciente</label>
+<input id="paciente" placeholder="Nombre completo">
+<label>Teléfono</label>
+<input id="telefono" placeholder="Opcional">
+<label>Fecha</label>
+<input id="fecha" type="date">
+<label>Examen</label>
+<select id="examen"></select>
+<label>Cantidad</label>
+<input id="cantidad" type="number" min="1" value="1">
+<button onclick="agregar()">Agregar examen</button>
+<div class="scroll">
+<table>
+<thead><tr><th>Examen</th><th>Precio</th><th>Cant.</th><th>Subtotal</th><th></th></tr></thead>
+<tbody id="carrito"></tbody>
+</table>
+</div>
+<label>Forma de pago</label>
+<select id="pago">
+<option>Efectivo</option>
+<option>Transferencia</option>
+<option>Tarjeta de débito</option>
+<option>Tarjeta de crédito</option>
+<option>Pendiente</option>
+</select>
+<label>Monto recibido (L)</label>
+<input id="recibido" type="number" min="0" value="0" oninput="actualizarTotal()">
+<div class="total" id="total">Total: L 0.00</div>
+<div id="saldo" class="small">Saldo pendiente: L 0.00</div>
+<button onclick="guardar()">Guardar factura</button>
+<button class="secondary" onclick="limpiar()">Limpiar</button>
+<p class="small">Comprobante interno; no sustituye una factura fiscal autorizada.</p>
+</section>
+
+<section class="card">
+<h2>Historial</h2>
+<input id="buscar" placeholder="Buscar por paciente o número" oninput="verHistorial()">
+<div id="historial"></div>
+</section>
+
+<section class="card">
+<h2>Catálogo de exámenes</h2>
+<p class="small">Puedes agregar exámenes y cambiar sus precios.</p>
+<label>Nombre del examen</label>
+<input id="nombreNuevo" placeholder="Nombre del examen">
+<label>Precio en lempiras</label>
+<input id="precioNuevo" type="number" min="0" step=".01">
+<button onclick="agregarCatalogo()">Agregar al catálogo</button>
+<div id="catalogo"></div>
+</section>
+
+<section class="card">
+<h2>Copias de seguridad</h2>
+<p class="small">Descarga periódicamente una copia de tus facturas y catálogo.</p>
+<button onclick="exportar()">Descargar copia</button>
+<label>Restaurar copia guardada</label>
+<input type="file" id="archivo" accept=".json,application/json">
+<button onclick="importar()">Importar copia</button>
+<p class="small">La importación reemplaza los datos actuales de este dispositivo.</p>
+</section>
+</main>
+<script>
+const inicial=[
+["Hemograma completo",200],
+["Glucosa",90],
+["Creatinina",170],
+["Nitrógeno ureico (BUN)",170],
+["TGO",175],
+["TGP",175]
+];
+let datos;
+try{
+ datos=JSON.parse(localStorage.getItem("sybDatos"));
+ if(!datos||!Array.isArray(datos.examenes)||!Array.isArray(datos.facturas))throw 0;
+}catch(e){
+ datos={examenes:inicial.map(x=>({nombre:x[0],precio:x[1]})),facturas:[],numero:1};
+}
+let carrito=[];
+const $=id=>document.getElementById(id);
+const dinero=n=>"L "+Number(n||0).toLocaleString("es-HN",{minimumFractionDigits:2,maximumFractionDigits:2});
+const seguro=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+$("fecha").value=new Date().toLocaleDateString("en-CA");
+function guardarDatos(){
+ localStorage.setItem("sybDatos",JSON.stringify(datos));
+ dibujarCatalogo();dibujarExamenes();verHistorial();
+}
+function dibujarExamenes(){
+ $("examen").innerHTML=datos.examenes.map((e,i)=>`<option value="${i}">${seguro(e.nombre)} — ${dinero(e.precio)}</option>`).join("");
+}
+function agregar(){
+ let e=datos.examenes[Number($("examen").value)];
+ let q=Math.max(1,Number($("cantidad").value)||1);
+ if(!e)return;
+ carrito.push({nombre:e.nombre,precio:Number(e.precio),cantidad:q});
+ dibujarCarrito();
+}
+function dibujarCarrito(){
+ $("carrito").innerHTML=carrito.map((e,i)=>`<tr><td>${seguro(e.nombre)}</td><td>${dinero(e.precio)}</td><td>${e.cantidad}</td><td>${dinero(e.precio*e.cantidad)}</td><td><button class="danger" onclick="quitar(${i})">X</button></td></tr>`).join("");
+ actualizarTotal();
+}
+function quitar(i){carrito.splice(i,1);dibujarCarrito()}
+function actualizarTotal(){
+ let t=carrito.reduce((s,e)=>s+e.precio*e.cantidad,0);
+ let r=Math.max(0,Number($("recibido").value)||0);
+ $("total").textContent="Total: "+dinero(t);
+ $("saldo").textContent="Saldo pendiente: "+dinero(Math.max(0,t-r))+" · Cambio: "+dinero(Math.max(0,r-t));
+}
+function limpiar(){
+ if(!confirm("¿Limpiar la factura sin guardar?"))return;
+ carrito=[];["paciente","telefono"].forEach(id=>$(id).value="");
+ $("recibido").value=0;$("fecha").value=new Date().toLocaleDateString("en-CA");
+ dibujarCarrito();
+}
+function guardar(){
+ let paciente=$("paciente").value.trim();
+ if(!paciente){alert("Escribe el nombre del paciente.");return}
+ if(!carrito.length){alert("Agrega al menos un examen.");return}
+ let total=carrito.reduce((s,e)=>s+e.precio*e.cantidad,0);
+ let recibido=Math.max(0,Number($("recibido").value)||0);
+ let f={
+ numero:datos.numero++,paciente,telefono:$("telefono").value,
+ fecha:$("fecha").value,pago:$("pago").value,
+ examenes:carrito.map(e=>({...e})),total,recibido,
+ saldo:Math.max(0,total-recibido)
+ };
+ datos.facturas.unshift(f);guardarDatos();
+ carrito=[];dibujarCarrito();
+ $("paciente").value="";$("telefono").value="";$("recibido").value=0;
+ alert("Factura guardada correctamente.");
+ imprimir(f);
+}
+function imprimir(f){
+ let w=window.open("","_blank");
+ if(!w){alert("El navegador bloqueó la impresión. Permite ventanas emergentes e inténtalo desde el historial.");return}
+ w.document.write(`<html><head><meta charset="UTF-8"><title>Factura</title><style>body{font-family:Arial;padding:20px}table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid #ccc;text-align:left}.r{text-align:right}</style></head><body>
+ <center><h2>Laboratorio Clínico Salud y Bienestar</h2><p>Siguatepeque, Comayagua<br>WhatsApp: 8956-3641</p><h3>COMPROBANTE INTERNO</h3></center>
+ <p><b>Factura:</b> SYB-${String(f.numero).padStart(5,"0")}<br><b>Fecha:</b> ${seguro(f.fecha)}<br><b>Paciente:</b> ${seguro(f.paciente)}<br><b>Teléfono:</b> ${seguro(f.telefono||"—")}<br><b>Pago:</b> ${seguro(f.pago)}</p>
+ <table><tr><th>Examen</th><th>Precio</th><th>Cant.</th><th>Subtotal</th></tr>${f.examenes.map(e=>`<tr><td>${seguro(e.nombre)}</td><td>${dinero(e.precio)}</td><td>${e.cantidad}</td><td>${dinero(e.precio*e.cantidad)}</td></tr>`).join("")}</table>
+ <h3 class="r">Total: ${dinero(f.total)}</h3><p class="r">Recibido: ${dinero(f.recibido)}<br>Saldo pendiente: ${dinero(f.saldo)}</p><center><p>Gracias por su confianza.</p><small>Este documento no sustituye una factura fiscal autorizada.</small></center><script>window.onload=()=>window.print()<\/script></body></html>`);
+ w.document.close();
+}
+function verHistorial(){
+ let q=($("buscar").value||"").toLowerCase();
+ let lista=datos.facturas.filter(f=>f.paciente.toLowerCase().includes(q)||String(f.numero).includes(q));
+ $("historial").innerHTML=lista.map(f=>`<div style="border-bottom:1px solid #ddd;padding:12px 0">
+ <b>SYB-${String(f.numero).padStart(5,"0")}</b> — ${seguro(f.paciente)}<br>
+ <span class="small">${seguro(f.fecha)} · Total ${dinero(f.total)} · Saldo ${dinero(f.saldo)}</span><br>
+ <button onclick="reimprimir(${f.numero})">Imprimir</button>
+ <button class="secondary" onclick="abonar(${f.numero})">Registrar abono</button>
+ </div>`).join("")||"<p>No hay facturas registradas.</p>";
+}
+function reimprimir(n){let f=datos.facturas.find(x=>x.numero===n);if(f)imprimir(f)}
+function abonar(n){
+ let f=datos.facturas.find(x=>x.numero===n);
+ if(!f||f.saldo<=0){alert("La factura no tiene saldo pendiente.");return}
+ let a=Number(prompt("Saldo pendiente: "+dinero(f.saldo)+"\nEscribe el monto del abono:"));
+ if(!(a>0)){alert("Monto no válido.");return}
+ f.recibido+=a;f.saldo=Math.max(0,f.total-f.recibido);
+ guardarDatos();alert("Abono registrado.");
+}
+function dibujarCatalogo(){
+ $("catalogo").innerHTML=datos.examenes.map((e,i)=>`<div style="border-bottom:1px solid #ddd;padding:8px 0">
+ <input aria-label="Nombre" id="cn${i}" value="${seguro(e.nombre)}">
+ <input aria-label="Precio" id="cp${i}" type="number" min="0" step=".01" value="${Number(e.precio)}">
+ <button onclick="editarCatalogo(${i})">Guardar cambio</button>
+ <button class="danger" onclick="eliminarCatalogo(${i})">Eliminar</button></div>`).join("");
+}
+function editarCatalogo(i){
+ let n=$("cn"+i).value.trim(),p=Number($("cp"+i).value);
+ if(!n||p<0||$("cp"+i).value===""){alert("Revisa el nombre y precio.");return}
+ datos.examenes[i]={nombre:n,precio:p};guardarDatos();alert("Catálogo actualizado.");
+}
+function eliminarCatalogo(i){
+ if(confirm("¿Eliminar este examen del catálogo?")){datos.examenes.splice(i,1);guardarDatos()}
+}
+function agregarCatalogo(){
+ let n=$("nombreNuevo").value.trim(),p=$("precioNuevo").value;
+ if(!n||p===""){alert("Escribe nombre y precio.");return}
+ datos.examenes.push({nombre:n,precio:Math.max(0,Number(p)||0)});
+ $("nombreNuevo").value="";$("precioNuevo").value="";
+ guardarDatos();
+}
+function exportar(){
+ let blob=new Blob([JSON.stringify(datos,null,2)],{type:"application/json"});
+ let url=URL.createObjectURL(blob),a=document.createElement("a");
+ a.href=url;a.download="respaldo-salud-bienestar.json";a.click();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function importar(){
+ let file=$("archivo").files[0];if(!file){alert("Selecciona una copia JSON.");return}
+ try{
+ let d=JSON.parse(await file.text());
+ if(!Array.isArray(d.examenes)||!Array.isArray(d.facturas))throw 0;
+ if(!confirm("La copia reemplazará los datos actuales. ¿Continuar?"))return;
+ datos=d;datos.numero=Number(datos.numero)||1;guardarDatos();alert("Copia restaurada.");
+ }catch(e){alert("No se pudo leer la copia seleccionada.")}
+}
+dibujarExamenes();dibujarCatalogo();dibujarCarrito();verHistorial();
+</script>
+</body>
+</html>

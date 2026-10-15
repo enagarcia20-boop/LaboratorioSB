@@ -176,7 +176,9 @@ function imprimir(f){
  <center><h2>Laboratorio Clínico Salud y Bienestar</h2><p>Siguatepeque, Comayagua<br>WhatsApp: 8956-3641</p><h3>COMPROBANTE INTERNO</h3></center>
  <p><b>Factura:</b> SYB-${String(f.numero).padStart(5,"0")}<br><b>Fecha:</b> ${seguro(f.fecha)}<br><b>Paciente:</b> ${seguro(f.paciente)}<br><b>Teléfono:</b> ${seguro(f.telefono||"—")}<br><b>Pago:</b> ${seguro(f.pago)}</p>
  <table><tr><th>Examen</th><th>Precio</th><th>Cant.</th><th>Subtotal</th></tr>${f.examenes.map(e=>`<tr><td>${seguro(e.nombre)}</td><td>${dinero(e.precio)}</td><td>${e.cantidad}</td><td>${dinero(e.precio*e.cantidad)}</td></tr>`).join("")}</table>
- <h3 class="r">Total: ${dinero(f.total)}</h3><p class="r">Recibido: ${dinero(f.recibido)}<br>Saldo pendiente: ${dinero(f.saldo)}</p><center><p>Gracias por su confianza.</p><small>Este documento no sustituye una factura fiscal autorizada.</small></center><script>window.onload=()=>window.print()<\/script></body></html>`);
+ 
+<h3 class="r">Total: ${dinero(f.total)}</h3><p class="r">Recibido: ${dinero(f.recibido)}<br>Saldo pendiente: ${dinero(f.saldo)}<br>Cambio a devolver: ${dinero(Math.max(0,f.recibido-f.total))}</p>
+<center><p>Gracias por su confianza.</p><small>Este documento no sustituye una factura fiscal autorizada.</small></center><script>window.onload=()=>window.print()<\/script></body></html>`);
  w.document.close();
 }
 function verHistorial(){

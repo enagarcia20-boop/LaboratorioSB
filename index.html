@@ -100,12 +100,96 @@ th,td{padding:8px 4px;border-bottom:1px solid #ddd;text-align:left;font-size:13p
 </main>
 <script>
 const inicial=[
-["Hemograma completo",200],
-["Glucosa",90],
+["Hemograma completo",250],
+["Hematocrito/Hemoglobina",100],
+["Recuento de glóbulos blancos",100],
+["Recuento de plaquetas",100],
+["Recuento de eosinófilos",100],
+["Eritrosedimentación (VES)",130],
+["Hematozoario (malaria o gota gruesa)",250],
+["Frotis de sangre periférica (FSP)",350],
+["Tipo ABO y RH",110],
+["Coombs directo",550],
+["Coombs indirecto",550],
+["Factor Du",550],
+["Tiempo de coagulación",130],
+["Tiempo de sangrado",130],
+["Tiempo de protrombina (TP o INR)",250],
+["Tiempo de tromboplastina (TTP)",250],
+["R.P.R./V.D.R.L.",100],
+["Proteína C reactiva (PCR)",270],
+["Antiestreptolisina (ASO)",270],
+["Factor reumatoide",270],
+["Anticuerpos Toxoplasma IgM",550],
+["Anticuerpos Toxoplasma IgG",550],
+["Gravindex en orina",125],
+["Gravindex en sangre",150],
+["Anticuerpos HIV I/II",350],
+["Antígenos febriles",600],
+["Anticuerpos Chagas",250],
+["Anticuerpos Helicobacter pylori en sangre",380],
+["Antígeno Helicobacter pylori en heces",650],
+["Anticuerpos Hepatitis A",455],
+["HBsAg Hepatitis B",270],
+["Anticuerpos Hepatitis C",270],
+["Antígenos Dengue NS1",550],
+["Influenza A/B/H1N1",600],
+["Examen en fresco",180],
+["KOH",500],
+["Coloración de Gram",230],
+["Baciloscopia BAAR",520],
+["Urocultivo + antibiograma",500],
+["Coprocultivo + antibiograma",500],
+["Exudado faríngeo",310],
+["Cultivo de secreción ótica",440],
+["Cultivo de secreción de herida",440],
+["Cultivo de exudado nasal",440],
+["Cultivo de secreción vaginal",440],
+["Cultivo de secreción genital",440],
+["Cultivo de secreción uretral",440],
+["Espermocultivo",500],
+["Espermiograma",500],
+["Cultivo de secreción de úlcera",500],
+["Examen general de orina",130],
+["Proteína de 24 horas",450],
+["Microalbuminuria",450],
+["Glucosuria",90],
+["Proteinuria",90],
+["Examen general de heces",130],
+["Sangre oculta en heces",250],
+["Wright en heces",400],
+["Rotavirus/adenovirus",555],
+["Glucosa en ayunas",90],
+["Glucosa 2HPP",90],
+["Curva de tolerancia oral a la glucosa",400],
+["Hemoglobina glicosilada A1C",500],
+["BUN (urea)",170],
 ["Creatinina",170],
-["Nitrógeno ureico (BUN)",170],
-["TGO",175],
-["TGP",175]
+["Ácido úrico",120],
+["Colesterol total",170],
+["Colesterol HDL",170],
+["Colesterol LDL",170],
+["Colesterol VLDL",170],
+["Triglicéridos",180],
+["Bilirrubina total",195],
+["Bilirrubina directa",195],
+["Bilirrubina indirecta",195],
+["TGO (AST)",170],
+["TGP (ALT)",170],
+["GGT",280],
+["Fosfatasa alcalina",220],
+["Amilasa",250],
+["Proteínas totales",140],
+["Albúmina relación A/G",140],
+["Sodio",770],
+["Calcio",270],
+["Fósforo",270],
+["LDH",510],
+["CPK total",310],
+["CPK-MB",310],
+["Test cardíaco",970],
+["Unidad de glóbulos rojos empacados",3500],
+["Unidad de sangre total",3500]
 ];
 let datos;
 try{
@@ -152,17 +236,51 @@ function limpiar(){
  dibujarCarrito();
 }
 function guardar(){
- let paciente=$("paciente").value.trim();
- if(!paciente){alert("Escribe el nombre del paciente.");return}
- if(!carrito.length){alert("Agrega al menos un examen.");return}
- let total=carrito.reduce((s,e)=>s+e.precio*e.cantidad,0);
- let recibido=Math.max(0,Number($("recibido").value)||0);
- let f={
- numero:datos.numero++,paciente,telefono:$("telefono").value,
- fecha:$("fecha").value,pago:$("pago").value,
- examenes:carrito.map(e=>({...e})),total,recibido,
- saldo:Math.max(0,total-recibido)
- };
+  let paciente=$("paciente").value.trim();
+  if(!paciente){
+    alert("Escribe el nombre del paciente.");
+    return;
+  }
+  if(!carrito.length){
+    alert("Agrega al menos un examen.");
+    return;
+  }
+
+  let subtotal=carrito.reduce((s,e)=>s+e.precio*e.cantidad,0);
+  let edad=Number.parseInt($("edad").value,10)||0;
+  let porcentajeDescuento=edad>=80?0.25:edad>=60?0.20:0;
+  let descuento=Math.round(subtotal*porcentajeDescuento*100)/100;
+  let total=subtotal-descuento;
+  let recibido=Math.max(0,Number($("recibido").value)||0);
+
+  let f={
+    numero:datos.numero++,
+    paciente,
+    edad:$("edad").value,
+    telefono:$("telefono").value,
+    fecha:$("fecha").value,
+    pago:$("pago").value,
+    examenes:carrito.map(e=>({...e})),
+    subtotal,
+    porcentajeDescuento,
+    descuento,
+    total,
+    recibido,
+    saldo:Math.max(0,total-recibido)
+  };
+
+  datos.facturas.unshift(f);
+  guardarDatos();
+  carrito=[];
+  dibujarCarrito();
+  $("paciente").value="";
+  $("edad").value="";
+  $("telefono").value="";
+  $("recibido").value=0;
+  alert("Factura guardada correctamente.");
+  imprimir(f);
+}
+
  datos.facturas.unshift(f);guardarDatos();
  carrito=[];dibujarCarrito();
  $("paciente").value="";$("telefono").value="";$("recibido").value=0;
